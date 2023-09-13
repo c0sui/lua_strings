@@ -1,7 +1,7 @@
 local mt = getmetatable("String")
 
 --[[
-	Library «Strings», v1.1
+	Library «Strings», v2.0
 	Custom strings methods 
 
 	Author: Cosmo
@@ -42,12 +42,14 @@ function mt.__index:isAlpha()
 	return self:find("[%d%p]") == nil
 end
 
-function mt.__index:split(sep, plain)
-	assert(not sep:isEmpty(), "Empty separator")    
-	result, pos = {}, 1
+function mt.__index:split(sep, plain)   
+	local result, pos = {}, 1
 	repeat
 		local s, f = self:find(sep or " ", pos, plain)
-		result[#result + 1] = self:sub(pos, s and s - 1)
+		local t = self:sub(pos, s and s - 1)
+		if t ~= "" then
+			result[#result + 1] = t
+		end
 		pos = f and f + 1
 	until pos == nil
 	return result
@@ -72,7 +74,7 @@ function mt.__index:upper()
 end
 
 function mt.__index:isSpace()
-	return self:find("^[%s%c]+$") ~= nil
+	return self:find("^[%s%c]*$") ~= nil
 end
 
 function mt.__index:isUpper()
@@ -126,7 +128,6 @@ function mt.__index:center(width, char)
 end
 
 function mt.__index:count(search, p1, p2)
-	assert(not search:isEmpty(), "Empty search")
 	local area = self:sub(p1 or 1, p2 or #self)
 	local count, pos = 0, p1 or 1
 	repeat
@@ -165,7 +166,10 @@ end
 
 function mt.__index:splitEqually(width)
 	assert(width > 0, "Width less than zero")
-	assert(width <= self:len(), "Width is greater than the string length")
+	if width >= self:len() then
+		return { self }
+	end
+
 	local result, i = {}, 1
 	repeat
 		if #result == 0 or #result[#result] >= width then
@@ -193,13 +197,13 @@ function mt.__index:wrap(width)
 	assert(width > 0, "Width less than zero")
 	assert(width < self:len(), "Width is greater than the string length")
 	local pos = 1
-    self = self:gsub("(%s+)()(%S+)()", function(sp, st, word, fi)
+	self = self:gsub("(%s+)()(%S+)()", function(sp, st, word, fi)
 		if fi - pos > (width or 72) then
 			pos = st
 			return "\n" .. word
 		end
 	end)
-   	return self
+	return self
 end
 
 function mt.__index:levDist(str)
@@ -245,6 +249,16 @@ function mt.__index:toCamel()
 	return table.concat(arr)
 end
 
+function mt.__index:unplain()
+	local arr = self:array()
+	for i, let in ipairs(arr) do
+		if let:find("().%+-*?[]^$", 1, true) then
+			arr[i] = "%" .. let
+		end
+	end
+	return table.concat(arr)
+end
+
 function mt.__index:shuffle(seed)
 	math.randomseed(seed or os.clock())
 	local arr, new = self:array(), {}
@@ -252,4 +266,63 @@ function mt.__index:shuffle(seed)
 		new[i] = arr[math.random(#arr)]
 	end
 	return table.concat(new)
+end
+
+function mt.__index:cutLimit(max_len, symbol)
+	assert(max_len > 0, "Maximum length cannot be less than or equal to 1")
+	if #self > 0 and #self > max_len then
+		symbol = symbol or ".."
+		self = self:sub(1, max_len) .. symbol
+	end
+	return self
+end
+
+function mt.__index:switchLayout()
+	local result = ""
+	local b = self:find("^[%s%p]*%a") ~= nil
+	local t = {
+		{"а", "f"}, {"б", ","}, {"в", "d"}, 
+		{"г", "u"}, {"д", "l"}, {"е", "t"}, 
+		{"ё", "`"}, {"ж", ";"}, {"з", "p"}, 
+		{"и", "b"}, {"й", "q"}, {"к", "r"}, 
+		{"л", "k"}, {"м", "v"}, {"н", "y"}, 
+		{"о", "j"}, {"п", "g"}, {"р", "h"}, 
+		{"с", "c"}, {"т", "n"}, {"у", "e"}, 
+		{"ф", "a"}, {"х", "["}, {"ц", "w"}, 
+		{"ч", "x"}, {"ш", "i"}, {"щ", "o"}, 
+		{"ь", "m"}, {"ы", "s"}, {"ъ", "]"}, 
+		{"э", "'"}, {"/", "."}, {"я", "z"}, 
+		{"А", "F"}, {"Б", "<"}, {"В", "D"}, 
+		{"Г", "U"}, {"Д", "L"}, {"Е", "T"}, 
+		{"Ё", "~"}, {"Ж", ":"}, {"З", "P"}, 
+		{"И", "B"}, {"Й", "Q"}, {"К", "R"}, 
+		{"Л", "K"}, {"М", "V"}, {"Н", "Y"}, 
+		{"О", "J"}, {"П", "G"}, {"Р", "H"}, 
+		{"С", "C"}, {"Т", "N"}, {"У", "E"}, 
+		{"Ф", "A"}, {"Х", "{"}, {"Ц", "W"}, 
+		{"Ч", "X"}, {"Ш", "I"}, {"Щ", "O"}, 
+		{"Ь", "M"}, {"Ы", "S"}, {"Ъ", "}"}, 
+		{"Э", "\""}, {"Ю", ">"}, {"Я", "Z"}
+	}
+
+	for l in self:gmatch(".") do
+		local fined = false
+		for _, v in ipairs(t) do
+			if l == v[b and 2 or 1] then
+				l = v[b and 1 or 2]
+				fined = true
+				break
+			end
+		end
+		if not fined then
+			for _, v in ipairs(t) do
+				if l == v[b and 1 or 2] then
+					l = v[b and 2 or 1]
+					break
+				end
+			end
+		end
+		result = (result .. l)
+	end
+	return result
 end
