@@ -117,7 +117,7 @@ end
 
 function mt.__index:spaceToTabs(count)
 	local spaces = (" "):rep(count or 4)
-	self = self:gsub(spaces, "t")
+	self = self:gsub(spaces, "\t")
 	return self
 end
 
@@ -260,12 +260,13 @@ function mt.__index:unplain()
 end
 
 function mt.__index:shuffle(seed)
-	math.randomseed(seed or os.clock())
-	local arr, new = self:array(), {}
-	for i = 1, #arr do
-		new[i] = arr[math.random(#arr)]
+	math.randomseed(seed or os.time())
+	local arr = self:array()
+	for i = #arr, 2, -1 do
+	    local j = math.random(i)
+	    arr[i], arr[j] = arr[j], arr[i]
 	end
-	return table.concat(new)
+	return table.concat(arr)
 end
 
 function mt.__index:cutLimit(max_len, symbol)
