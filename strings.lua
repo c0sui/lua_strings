@@ -1,12 +1,12 @@
 local mt = getmetatable("String")
 
 --[[
-	Library «Strings», v2.0
-	Custom strings methods 
+	Library «Strings», v3.0
+	Custom strings methods
 
 	Author: Cosmo
 	VK: vk.me/cosui
-	TG: t.me/cosmo_way
+	TG: t.me/c0sui
 	BH: blast.hk/members/217639
 ]]
 
@@ -14,7 +14,7 @@ function mt.__index:insert(implant, pos)
 	if pos == nil then
 		return self .. implant
 	end
-	return self:sub(1, pos) .. implant .. self:sub(pos + 1)
+	return self:sub(1, pos - 1) .. implant .. self:sub(pos)
 end
 
 function mt.__index:extract(pattern)
@@ -31,7 +31,7 @@ function mt.__index:array()
 end
 
 function mt.__index:isEmpty()
-	return self:find("%S") == nil
+	return self == ""
 end
 
 function mt.__index:isDigit()
@@ -42,16 +42,26 @@ function mt.__index:isAlpha()
 	return self:find("[%d%p]") == nil
 end
 
-function mt.__index:split(sep, plain)   
-	local result, pos = {}, 1
-	repeat
-		local s, f = self:find(sep or " ", pos, plain)
-		local t = self:sub(pos, s and s - 1)
-		if t ~= "" then
-			result[#result + 1] = t
+function mt.__index:split(sep, plain)
+	local result = {}
+	local pos = 1
+	sep = sep or " "
+	if sep:isEmpty() then
+		for i = 1, #self do
+			result[i] = self:sub(i, i)
 		end
-		pos = f and f + 1
-	until pos == nil
+	else
+		while pos <= #self do
+			local s, f = self:find(sep, pos, plain)
+			if s then
+				table.insert(result, self:sub(pos, s - 1))
+				pos = f + 1
+			else
+				table.insert(result, self:sub(pos))
+				break
+			end
+		end
+	end
 	return result
 end
 
@@ -104,8 +114,12 @@ function mt.__index:endsWith(str)
 end
 
 function mt.__index:capitalize()
-	local cap = self:sub(1, 1):upper()
-	self = self:gsub("^.", cap)
+	self = self:gsub("^.", string.upper)
+	return self
+end
+
+function mt.__index:uncapitalize()
+	self = self:gsub("^.", string.lower)
 	return self
 end
 
@@ -123,7 +137,7 @@ end
 
 function mt.__index:center(width, char)
 	local len = width - #self
-	local s = string.rep(char or " ", len) 
+	local s = string.rep(char or " ", len)
 	return s:insert(self, math.ceil(len / 2))
 end
 
@@ -195,14 +209,15 @@ end
 
 function mt.__index:wrap(width)
 	assert(width > 0, "Width less than zero")
-	assert(width < self:len(), "Width is greater than the string length")
-	local pos = 1
-	self = self:gsub("(%s+)()(%S+)()", function(sp, st, word, fi)
-		if fi - pos > (width or 72) then
-			pos = st
-			return "\n" .. word
-		end
-	end)
+	if width < self:len() then
+		local pos = 1
+		self = self:gsub("(%s+)()(%S+)()", function(sp, st, word, fi)
+			if fi - pos > (width or 72) then
+				pos = st
+				return "\n" .. word
+			end
+		end)
+	end
 	return self
 end
 
@@ -214,10 +229,12 @@ function mt.__index:levDist(str)
 	elseif self == str then
 		return 0
 	end
-	
+
 	local cost = 0
 	local matrix = {}
-	for i = 0, #self do matrix[i] = {}; matrix[i][0] = i end
+	for i = 0, #self do
+		matrix[i] = {}; matrix[i][0] = i
+	end
 	for i = 0, #str do matrix[0][i] = i end
 	for i = 1, #self, 1 do
 		for j = 1, #str, 1 do
@@ -234,7 +251,7 @@ end
 
 function mt.__index:getSimilarity(str)
 	local dist = self:levDist(str)
-	return 1 - dist / math.max(#self, #str)
+	return 1 - dist / math.max(#self, #str), dist
 end
 
 function mt.__index:empty()
@@ -249,24 +266,17 @@ function mt.__index:toCamel()
 	return table.concat(arr)
 end
 
-function mt.__index:unplain()
-	local arr = self:array()
-	for i, let in ipairs(arr) do
-		if let:find("().%+-*?[]^$", 1, true) then
-			arr[i] = "%" .. let
-		end
-	end
-	return table.concat(arr)
+function mt.__index:reg_escape()
+	return (self:gsub("(%W)", "%%%1"))
 end
 
 function mt.__index:shuffle(seed)
-	math.randomseed(seed or os.time())
-	local arr = self:array()
-	for i = #arr, 2, -1 do
-	    local j = math.random(i)
-	    arr[i], arr[j] = arr[j], arr[i]
+	math.randomseed(seed or os.clock())
+	local arr, new = self:array(), {}
+	for i = 1, #arr do
+		new[i] = arr[math.random(#arr)]
 	end
-	return table.concat(arr)
+	return table.concat(new)
 end
 
 function mt.__index:cutLimit(max_len, symbol)
@@ -282,28 +292,28 @@ function mt.__index:switchLayout()
 	local result = ""
 	local b = self:find("^[%s%p]*%a") ~= nil
 	local t = {
-		{"а", "f"}, {"б", ","}, {"в", "d"}, 
-		{"г", "u"}, {"д", "l"}, {"е", "t"}, 
-		{"ё", "`"}, {"ж", ";"}, {"з", "p"}, 
-		{"и", "b"}, {"й", "q"}, {"к", "r"}, 
-		{"л", "k"}, {"м", "v"}, {"н", "y"}, 
-		{"о", "j"}, {"п", "g"}, {"р", "h"}, 
-		{"с", "c"}, {"т", "n"}, {"у", "e"}, 
-		{"ф", "a"}, {"х", "["}, {"ц", "w"}, 
-		{"ч", "x"}, {"ш", "i"}, {"щ", "o"}, 
-		{"ь", "m"}, {"ы", "s"}, {"ъ", "]"}, 
-		{"э", "'"}, {"/", "."}, {"я", "z"}, 
-		{"А", "F"}, {"Б", "<"}, {"В", "D"}, 
-		{"Г", "U"}, {"Д", "L"}, {"Е", "T"}, 
-		{"Ё", "~"}, {"Ж", ":"}, {"З", "P"}, 
-		{"И", "B"}, {"Й", "Q"}, {"К", "R"}, 
-		{"Л", "K"}, {"М", "V"}, {"Н", "Y"}, 
-		{"О", "J"}, {"П", "G"}, {"Р", "H"}, 
-		{"С", "C"}, {"Т", "N"}, {"У", "E"}, 
-		{"Ф", "A"}, {"Х", "{"}, {"Ц", "W"}, 
-		{"Ч", "X"}, {"Ш", "I"}, {"Щ", "O"}, 
-		{"Ь", "M"}, {"Ы", "S"}, {"Ъ", "}"}, 
-		{"Э", "\""}, {"Ю", ">"}, {"Я", "Z"}
+		{ "а", "f" }, { "б", "," }, { "в", "d" },
+		{ "г", "u" }, { "д", "l" }, { "е", "t" },
+		{ "ё", "`" }, { "ж", ";" }, { "з", "p" },
+		{ "и", "b" }, { "й", "q" }, { "к", "r" },
+		{ "л", "k" }, { "м", "v" }, { "н", "y" },
+		{ "о", "j" }, { "п", "g" }, { "р", "h" },
+		{ "с", "c" }, { "т", "n" }, { "у", "e" },
+		{ "ф", "a" }, { "х", "[" }, { "ц", "w" },
+		{ "ч", "x" }, { "ш", "i" }, { "щ", "o" },
+		{ "ь", "m" }, { "ы", "s" }, { "ъ", "]" },
+		{ "э", "'" }, { "/", "." }, { "я", "z" },
+		{ "А", "F" }, { "Б", "<" }, { "В", "D" },
+		{ "Г", "U" }, { "Д", "L" }, { "Е", "T" },
+		{ "Ё", "~" }, { "Ж", ":" }, { "З", "P" },
+		{ "И", "B" }, { "Й", "Q" }, { "К", "R" },
+		{ "Л", "K" }, { "М", "V" }, { "Н", "Y" },
+		{ "О", "J" }, { "П", "G" }, { "Р", "H" },
+		{ "С", "C" }, { "Т", "N" }, { "У", "E" },
+		{ "Ф", "A" }, { "Х", "{" }, { "Ц", "W" },
+		{ "Ч", "X" }, { "Ш", "I" }, { "Щ", "O" },
+		{ "Ь", "M" }, { "Ы", "S" }, { "Ъ", "}" },
+		{ "Э", "\"" }, { "Ю", ">" }, { "Я", "Z" }
 	}
 
 	for l in self:gmatch(".") do
