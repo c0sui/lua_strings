@@ -266,7 +266,7 @@ end
 ---string.startsWith("Hello world", "world") -- Output: false
 ---```
 function mt.__index:startsWith(str)
-	return self:sub(1, #str):isSimilar(str)
+	return self:sub(1, #str) == prefix
 end
 
 ---[Strings.lua] Checks if the string ends with the specified substring.
@@ -281,7 +281,7 @@ end
 ---string.endsWith("Hello world", "Hello") -- Output: false
 ---```
 function mt.__index:endsWith(str)
-	return self:sub(#self - #str + 1, #self):isSimilar(str)
+	return self:sub(-#str) == str
 end
 
 ---[Strings.lua] Capitalizes the first letter of the string.
